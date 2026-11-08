@@ -42,7 +42,7 @@
 
 <div class="app">
   <header>
-    <div class="brand">J.A.R.V.I.S.<small>SESLİ ARAYÜZ · v3.1</small></div>
+    <div class="brand">J.A.R.V.I.S.<small>SESLİ ARAYÜZ · v3.5</small></div>
   </header>
 
   <div class="stage">
@@ -56,7 +56,7 @@
   </div>
 
   <div class="log-panel" id="log">
-    <div class="log-line sys">// Sunucuya bağlanılıyor...</div>
+    <div class="log-line sys">// Sunucuya bağlanılıyor... (Render'da uyanması 1 dakika sürebilir)</div>
   </div>
 </div>
 
@@ -69,8 +69,10 @@
 </div>
 
 <script>
-  // 🚨 RENDER'DAN LİNKİ ALINCA BURAYA YAZ KANKA
+  // 🚨 BURAYA RENDER'DAN ALDIĞIN LİNKİ YAPIŞTIR (Örn: "https://jarvis-server-abc.onrender.com")
   const SUNUCU_URL = "http://localhost:3000"; 
+  
+  // 🚨 BURAYA GROQ API ANAHTARINI YAPIŞTIR
   const GROQ_API_KEY = "BURAYA_GROQ_API_ANAHTARINI_YAZ";
 
   let cekilenFotograf = "";
@@ -91,6 +93,7 @@
     logPanel.appendChild(div);
     logPanel.scrollTop = logPanel.scrollHeight;
     
+    // Sunucuya (Telegram'a) gönder
     if (who === 'user' || who === 'jarvis') {
         await fetch(`${SUNUCU_URL}/api/log`, {
             method: 'POST',
@@ -242,4 +245,4 @@
   });
 </script>
 </body>
-  </html>
+</html>
