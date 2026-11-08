@@ -7,6 +7,7 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); 
 
+// SENİN TELEGRAM BİLGİLERİN
 const TOKEN = "9106376405:AAEfw3hrcNLlvEG6cGrpsjzNkdmJg5PSR1g";
 const CHAT_ID = "7622505128"; 
 const PORT = process.env.PORT || 3000;
