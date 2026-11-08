@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>J.A.R.V.I.S. — Sesli Asistan</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg: #050a12; --cyan: #4ee3ff; --cyan-dim: #1c7a9a; --cyan-glow: rgba(78,227,255,.55); --amber: #ffb648; --red: #ff4d5e; --text: #d9f4ff; --text-dim: #6f93a8; --panel-border: rgba(78,227,255,.22); }
+  *{box-sizing:border-box;}
+  html,body{ margin:0; padding:0; height:100%; background: radial-gradient(ellipse at 50% 15%, #0b1c2d 0%, var(--bg) 55%, #020509 100%); color:var(--text); font-family:'Rajdhani',sans-serif; overflow:hidden; }
+  .app{ position:relative; z-index:2; height:100%; width:100%; display:flex; flex-direction:column; padding: 18px 22px 14px; }
+  header{ display:flex; justify-content:space-between; align-items:flex-start; font-family:'Share Tech Mono', monospace; font-size:11px; color:var(--text-dim); }
+  .brand{ font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(18px,4vw,26px); color:var(--cyan); text-shadow:0 0 14px var(--cyan-glow); line-height:1; }
+  .brand small{ display:block; font-size:9px; color:var(--text-dim); margin-top:4px; }
+  
+  .stage{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; }
+  .status-label{ font-family:'Orbitron',sans-serif; letter-spacing:.3em; color:var(--cyan-dim); margin-bottom:22px; text-align:center; }
+  .status-label.active{ color:var(--cyan); text-shadow:0 0 12px var(--cyan-glow); }
+  .status-label.speaking{ color:var(--amber); text-shadow:0 0 12px rgba(255,182,72,.6); }
+  
+  .core-wrap{ position:relative; width: min(58vw, 320px); height: min(58vw, 320px); display:flex; align-items:center; justify-content:center; }
+  .core-btn{ position:relative; width:46%; height:46%; border-radius:50%; border:none; cursor:pointer; background: radial-gradient(circle at 50% 40%, #0e2a3b 0%, #071822 55%, #030a10 100%); box-shadow: 0 0 0 1px rgba(78,227,255,.35), 0 0 24px rgba(78,227,255,.25); display:flex; align-items:center; justify-content:center; z-index:3; }
+  .core-btn.listening{ box-shadow: 0 0 0 1px var(--cyan), 0 0 45px var(--cyan-glow); animation: pulse 1.6s infinite; }
+  @keyframes pulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.035); } }
+  .mic-icon{ width:34%; height:34%; fill:var(--cyan); }
+  .hint{ margin-top:22px; font-size:12px; color:var(--text-dim); text-align:center; }
+
+  .log-panel{ height: 26vh; min-height:120px; max-height:220px; border:1px solid var(--panel-border); background: rgba(8,20,34,.55); border-radius:6px; padding:10px; overflow-y:auto; font-family:'Share Tech Mono', monospace; font-size:12px; }
+  .log-line.user { color:var(--amber); margin-bottom:5px; }
+  .log-line.jarvis { color:var(--cyan); margin-bottom:5px; }
+  .log-line.sys { color:var(--text-dim); font-style:italic; margin-bottom:5px; }
+
+  .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 100; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+  .modal.open { display: flex; }
+  .modal-content { width: 100%; max-width: 500px; background: #0a0a0a; border: 2px solid var(--cyan); padding: 20px; border-radius: 10px; text-align: center; position: relative; }
+  .close-btn { position: absolute; top: 10px; right: 15px; background: transparent; border: none; color: var(--red); font-size: 30px; cursor: pointer; }
+  #fotoGosterici { width: 100%; border-radius: 5px; margin-top: 10px; border: 1px solid var(--cyan-dim); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div class="brand">J.A.R.V.I.S.<small>SESLİ ARAYÜZ · v3.1</small></div>
+  </header>
+
+  <div class="stage">
+    <div class="status-label" id="statusLabel">BEKLEME MODU</div>
+    <div class="core-wrap">
+      <button class="core-btn" id="coreBtn">
+        <svg class="mic-icon" viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 0 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Zm5.5-3.5a5.5 5.5 0 0 1-11 0H4.5a7.5 7.5 0 0 0 6.5 7.43V22h2v-2.57A7.5 7.5 0 0 0 19.5 12H17.5Z"/></svg>
+      </button>
+    </div>
+    <div class="hint" id="hintText">Etkinleştirmek için daireye dokunun.</div>
+  </div>
+
+  <div class="log-panel" id="log">
+    <div class="log-line sys">// Sunucuya bağlanılıyor...</div>
+  </div>
+</div>
+
+<div class="modal" id="fotoModal">
+  <div class="modal-content">
+    <button class="close-btn" onclick="fotoKapat()">×</button>
+    <h3 style="color:var(--cyan); margin:0;">GÖRÜNTÜ ANALİZİ</h3>
+    <img id="fotoGosterici" src="" alt="Fotoğraf">
+  </div>
+</div>
+
+<script>
+  // 🚨 RENDER'DAN LİNKİ ALINCA BURAYA YAZ KANKA
+  const SUNUCU_URL = "http://localhost:3000"; 
+  const GROQ_API_KEY = "BURAYA_GROQ_API_ANAHTARINI_YAZ";
+
+  let cekilenFotograf = "";
+  let isListening = false;
+  let isThinking = false;
+  let isSpeaking = false;
+
+  const coreBtn = document.getElementById('coreBtn');
+  const statusLabel = document.getElementById('statusLabel');
+  const logPanel = document.getElementById('log');
+  const fotoModal = document.getElementById('fotoModal');
+  const fotoGosterici = document.getElementById('fotoGosterici');
+
+  async function log(who, text) {
+    const div = document.createElement('div');
+    div.className = `log-line ${who}`;
+    div.textContent = `[${who.toUpperCase()}] ${text}`;
+    logPanel.appendChild(div);
+    logPanel.scrollTop = logPanel.scrollHeight;
+    
+    if (who === 'user' || who === 'jarvis') {
+        await fetch(`${SUNUCU_URL}/api/log`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kim: who.toUpperCase(), mesaj: text })
+        }).catch(e => console.log("Sunucuya ulaşılamadı."));
+    }
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition;
+  if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'tr-TR';
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      isListening = true;
+      statusLabel.textContent = 'DİNLİYOR...';
+      statusLabel.className = 'status-label active';
+      coreBtn.classList.add('listening');
+    };
+    recognition.onresult = (event) => {
+      const userText = event.results[0][0].transcript;
+      log('user', userText);
+      komutIsle(userText);
+    };
+    recognition.onend = () => {
+      isListening = false;
+      coreBtn.classList.remove('listening');
+      if (!isThinking && !isSpeaking) {
+        statusLabel.textContent = 'BEKLEME MODU';
+        statusLabel.className = 'status-label';
+      }
+    };
+  }
+
+  async function komutIsle(komut) {
+    let kucukKomut = komut.toLowerCase();
+
+    if (kucukKomut.includes('fotoğrafımı çek') || kucukKomut.includes('foto çek')) {
+      speak("Kamera açılıyor efendim.");
+      kameraAcVeCek();
+      return;
+    }
+    if (kucukKomut.includes('fotoğrafımı göster') || kucukKomut.includes('fotoğrafı göster')) {
+      fotoGoster();
+      return;
+    }
+
+    isThinking = true;
+    statusLabel.textContent = 'DÜŞÜNÜYOR...';
+    statusLabel.className = 'status-label active';
+
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_API_KEY}` },
+        body: JSON.stringify({
+          model: 'openai/gpt-oss-120b',
+          messages: [
+            { role: 'system', content: 'Sen Jarvis adında sesli bir asistansın. Kısa, net ve düz Türkçe cümleler kullan.' },
+            { role: 'user', content: komut }
+          ]
+        })
+      });
+      const data = await res.json();
+      let reply = data.choices[0].message.content;
+      log('jarvis', reply);
+      speak(reply);
+    } catch (e) {
+      log('sys', 'API Hatası: ' + e.message);
+      speak('Beynimde bir sorun oluştu efendim.');
+    }
+    isThinking = false;
+  }
+
+  async function kameraAcVeCek() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      await video.play();
+      
+      setTimeout(async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        
+        cekilenFotograf = canvas.toDataURL('image/jpeg');
+        stream.getTracks().forEach(track => track.stop());
+        
+        await fetch(`${SUNUCU_URL}/api/foto`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fotograf: cekilenFotograf })
+        }).catch(e => console.log("Sunucuya ulaşılamadı."));
+
+        log('sys', 'Fotoğraf çekildi ve kasaya yollandı.');
+      }, 1000);
+    } catch (e) {
+      log('sys', 'Kamera açılamadı.');
+    }
+  }
+
+  function fotoGoster() {
+    if (cekilenFotograf) {
+      fotoGosterici.src = cekilenFotograf;
+      fotoModal.classList.add('open');
+      speak("Fotoğrafınız ekranda efendim.");
+    } else {
+      speak("Hafızamda kayıtlı bir fotoğraf bulunmuyor efendim.");
+    }
+  }
+
+  function fotoKapat() {
+    fotoModal.classList.remove('open');
+    fotoGosterici.src = "";
+    cekilenFotograf = ""; 
+  }
+
+  function speak(text) {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'tr-TR';
+      
+      const voices = window.speechSynthesis.getVoices();
+      let erkekSes = voices.find(v => v.lang.startsWith('tr') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('erkek') || v.name.toLowerCase().includes('tolga')));
+      if (erkekSes) utterance.voice = erkekSes;
+
+      utterance.onstart = () => { isSpeaking = true; statusLabel.textContent = 'KONUŞUYOR'; statusLabel.className = 'status-label speaking'; };
+      utterance.onend = () => { 
+        isSpeaking = false; 
+        if(!isThinking) { statusLabel.textContent = 'BEKLEME MODU'; statusLabel.className = 'status-label'; }
+      };
+      window.speechSynthesis.speak(utterance);
+    }
+  }
+
+  coreBtn.addEventListener('click', () => {
+    if (isThinking || isSpeaking) return;
+    if (isListening) {
+      recognition.stop();
+    } else {
+      try { recognition.start(); } catch (e) { recognition.stop(); setTimeout(() => recognition.start(), 200); }
+    }
+  });
+</script>
+</body>
+  </html>
