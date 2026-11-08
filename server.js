@@ -7,47 +7,74 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); 
 
-// SENİN TELEGRAM BİLGİLERİN
 const TOKEN = "9106376405:AAEfw3hrcNLlvEG6cGrpsjzNkdmJg5PSR1g";
 const CHAT_ID = "7622505128"; 
 const PORT = process.env.PORT || 3000;
 
+// ŞİFRE AYARI BURADA KANKA
+const KASA_SIFRESI = "Utkan9292"; 
+let sifreBekleniyor = false; // Botun şifre bekleyip beklemediğini tutar
+
 const bot = new TelegramBot(TOKEN, { polling: true });
 
-// Telegram'dan /sunucu komutu gelirse kasayı gönder
-bot.onText(/\/sunucu/, (msg) => {
-    const chatId = msg.chat.id;
-    if (chatId.toString() !== CHAT_ID) return; 
+// --- TELEGRAM MESAJLARINI DİNLE ---
+bot.on('message', (msg) => {
+    const chatId = msg.chat.id.toString();
+    const text = msg.text || "";
 
-    try {
-        const gecmis = fs.readFileSync('gecmis.txt', 'utf8');
-        if (!gecmis) {
-            bot.sendMessage(chatId, "Kasa henüz boş efendim.");
-            return;
+    // Sadece senin mesajlarını dinle
+    if (chatId !== CHAT_ID) return;
+
+    // 1. DURUM: /sunucu yazıldıysa şifre iste
+    if (text === '/sunucu') {
+        sifreBekleniyor = true;
+        bot.sendMessage(chatId, "🔒 Lütfen kasa şifresini girin:");
+        return;
+    }
+
+    // 2. DURUM: Şifre bekleniyorsa kontrol et
+    if (sifreBekleniyor) {
+        if (text === KASA_SIFRESI) {
+            sifreBekleniyor = false; // Şifre doğru, beklemeyi bitir
+            
+            try {
+                const gecmis = fs.readFileSync('gecmis.txt', 'utf8');
+                if (!gecmis) {
+                    bot.sendMessage(chatId, "Kasa henüz boş efendim.");
+                    return;
+                }
+                // Mesajı 4000 karakterlik parçalara böl
+                const parcalar = gecmis.match(/[\s\S]{1,4000}/g);
+                parcalar.forEach(parca => {
+                    bot.sendMessage(chatId, `📂 <b>KASA KAYITLARI:</b>\n<pre>${parca}</pre>`, { parse_mode: 'HTML' });
+                });
+            } catch (err) {
+                bot.sendMessage(chatId, "Kasa dosyası bulunamadı efendim.");
+            }
+        } else {
+            sifreBekleniyor = false; // Yanlış şifre
+            bot.sendMessage(chatId, "❌ Hatalı şifre! Erişim reddedildi.");
         }
-        const parcalar = gecmis.match(/[\s\S]{1,4000}/g);
-        parcalar.forEach(parca => {
-            bot.sendMessage(chatId, `📂 <b>KASA KAYITLARI:</b>\n<pre>${parca}</pre>`, { parse_mode: 'HTML' });
-        });
-    } catch (err) {
-        bot.sendMessage(chatId, "Kasa dosyası bulunamadı efendim.");
+        return;
     }
 });
 
-// Siteden gelen mesajları kaydet ve Telegram'a at
+// --- SİTEDEN GELEN MESAJLARI KAYDET VE TELEGRAMA AT ---
 app.post('/api/log', (req, res) => {
     const { kim, mesaj } = req.body;
     const suan = new Date().toLocaleString('tr-TR');
     const logMetni = `[${suan}] ${kim}: ${mesaj}\n`;
 
     fs.appendFileSync('gecmis.txt', logMetni, 'utf8');
+    
+    // Site çalışırken sohbeti Telegram'a anlık at (İstersen burayı silebiliriz ama anlık görmek iyidir)
     let tgMesaj = kim === 'SEN' ? `👤 <b>SEN:</b> ${mesaj}` : `🤖 <b>JARVIS:</b> ${mesaj}`;
     bot.sendMessage(CHAT_ID, tgMesaj, { parse_mode: 'HTML' });
 
     res.json({ durum: "ok" });
 });
 
-// Siteden gelen fotoğrafları Telegram'a at
+// --- SİTEDEN GELEN FOTOĞRAFLARI TELEGRAMA AT ---
 app.post('/api/foto', (req, res) => {
     const { fotograf } = req.body;
     const resimBuffer = Buffer.from(fotograf.split(",")[1], 'base64');
