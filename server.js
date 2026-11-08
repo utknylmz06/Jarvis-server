@@ -7,8 +7,9 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); 
 
-const TOKEN = "9106376405:AAEfw3hrcNLlvEG6cGrpsjzNkdmJg5PSR1g";
-const CHAT_ID = "7622505128"; 
+// Şifreler artık Render'ın kasasından okunacak
+const TOKEN = process.env.TELEGRAM_TOKEN;
+const CHAT_ID = process.env.CHAT_ID; 
 const PORT = process.env.PORT || 3000;
 
 // ŞİFRE AYARI BURADA KANKA
